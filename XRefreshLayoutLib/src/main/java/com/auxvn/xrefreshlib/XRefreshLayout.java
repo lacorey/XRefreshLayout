@@ -78,6 +78,7 @@ public class XRefreshLayout extends ViewGroup {
         if (arr != null) {
             mScroller = new Scroller(context);
             mIndicator = new XrlIndicator();
+            mScrollChecker = new ScrollChecker();
 
             mHeaderId = arr.getResourceId(R.styleable.XRefreshLayout_xrl_header, mHeaderId);
             mContainerId = arr.getResourceId(R.styleable.XRefreshLayout_xrl_content, mContainerId);
@@ -178,7 +179,7 @@ public class XRefreshLayout extends ViewGroup {
             MarginLayoutParams lp = (MarginLayoutParams) mHeaderView.getLayoutParams();
             mHeaderHeight = mHeaderView.getMeasuredHeight() + lp.topMargin + lp.bottomMargin;
             DLog.d(LOG_TAG, "onMeasure header, width: %s, height: %s", mHeaderView.getMeasuredWidth(),mHeaderHeight);
-//            mPtrIndicator.setHeaderHeight(mHeaderHeight);
+            mIndicator.setHeaderHeight(mHeaderHeight);
         }
 
         if (mContent != null) {
@@ -266,8 +267,6 @@ public class XRefreshLayout extends ViewGroup {
         return super.dispatchTouchEvent(e);
     }
 
-    private int lastX,lastY;
-
     @Override
     public boolean dispatchTouchEvent(MotionEvent e) {
         if (!isEnabled() || mContent == null || mHeaderView == null) {
@@ -281,8 +280,18 @@ public class XRefreshLayout extends ViewGroup {
         switch (action) {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-
-                break;
+                mIndicator.onRelease();
+                if (mIndicator.hasLeftStartPosition()) {
+                    DLog.d(LOG_TAG, "call onRelease when user release");
+                    onRelease(false);
+                    if (mIndicator.hasMovedAfterPressedDown()) {
+//                        sendCancelEvent();
+                        return true;
+                    }
+                    return dispatchTouchEventSupper(e);
+                } else {
+                    return dispatchTouchEventSupper(e);
+                }
             case MotionEvent.ACTION_DOWN:
                 mHasSendCancelEvent = false;
                 mIndicator.onPressDown(e.getX(), e.getY());
@@ -294,7 +303,6 @@ public class XRefreshLayout extends ViewGroup {
                 // So let the event pass to children.
                 // fix #93, #102
                 dispatchTouchEventSupper(e);
-                return true;
                 return true;
             case MotionEvent.ACTION_MOVE:
                 mLastMoveEvent = e;
@@ -316,7 +324,8 @@ public class XRefreshLayout extends ViewGroup {
                 boolean canMoveUp = mIndicator.hasLeftStartPosition();
 
                 boolean canMoveDown = mXrlHandler != null && mXrlHandler.checkCanDoRefresh(this, mContent, mHeaderView);
-                DLog.v(LOG_TAG, "ACTION_MOVE: offsetY:%s, currentPos: %s, moveUp: %s, canMoveUp: %s, moveDown: %s: canMoveDown: %s", offsetY, mPtrIndicator.getCurrentPosY(), moveUp, canMoveUp, moveDown, canMoveDown);
+                DLog.v(LOG_TAG, "ACTION_MOVE: offsetY:%s, currentPos: %s, moveUp: %s, canMoveUp: %s," +
+                        " moveDown: %s: canMoveDown: %s", offsetY, mIndicator.getCurrentPosY(), moveUp, canMoveUp, moveDown, canMoveDown);
 
                 // disable move when header not reach top
                 if (moveDown && mXrlHandler != null && !mXrlHandler.checkCanDoRefresh(this, mContent, mHeaderView)) {
@@ -361,58 +370,54 @@ public class XRefreshLayout extends ViewGroup {
         // once moved, cancel event will be sent to child
         if (isUnderTouch && !mHasSendCancelEvent && mIndicator.hasMovedAfterPressedDown()) {
             mHasSendCancelEvent = true;
-            sendCancelEvent();
+//            sendCancelEvent();
         }
 
         // leave initiated position or just refresh complete
+//        if ((mIndicator.hasJustLeftStartPosition() && mStatus == PTR_STATUS_INIT) ||
+//                (mIndicator.goDownCrossFinishPosition() && mStatus == PTR_STATUS_COMPLETE && isEnabledNextPtrAtOnce())) {
         if ((mIndicator.hasJustLeftStartPosition() && mStatus == PTR_STATUS_INIT) ||
-                (mIndicator.goDownCrossFinishPosition() && mStatus == PTR_STATUS_COMPLETE && isEnabledNextPtrAtOnce())) {
+                (mIndicator.goDownCrossFinishPosition() && mStatus == PTR_STATUS_COMPLETE)) {
 
             mStatus = PTR_STATUS_PREPARE;
-            mPtrUIHandlerHolder.onUIRefreshPrepare(this);
-            if (DEBUG) {
-                PtrCLog.i(LOG_TAG, "PtrUIHandler: onUIRefreshPrepare, mFlag %s", mFlag);
-            }
+//            mPtrUIHandlerHolder.onUIRefreshPrepare(this);
+            DLog.i(LOG_TAG, "PtrUIHandler: onUIRefreshPrepare, mFlag %s", mFlag);
         }
 
         // back to initiated position
-        if (mPtrIndicator.hasJustBackToStartPosition()) {
-            tryToNotifyReset();
+//        if (mIndicator.hasJustBackToStartPosition()) {
+//            tryToNotifyReset();
+//
+//            // recover event to children
+//            if (isUnderTouch) {
+//                sendDownEvent();
+//            }
+//        }
+//
+//        // Pull to Refresh
+//        if (mStatus == PTR_STATUS_PREPARE) {
+//            // reach fresh height while moving from top to bottom
+//            if (isUnderTouch && !isAutoRefresh() && mPullToRefresh
+//                    && mIndicator.crossRefreshLineFromTopToBottom()) {
+//                tryToPerformRefresh();
+//            }
+//            // reach header height while auto refresh
+//            if (performAutoRefreshButLater() && mIndicator.hasJustReachedHeaderHeightFromTopToBottom()) {
+//                tryToPerformRefresh();
+//            }
+//        }
 
-            // recover event to children
-            if (isUnderTouch) {
-                sendDownEvent();
-            }
-        }
-
-        // Pull to Refresh
-        if (mStatus == PTR_STATUS_PREPARE) {
-            // reach fresh height while moving from top to bottom
-            if (isUnderTouch && !isAutoRefresh() && mPullToRefresh
-                    && mPtrIndicator.crossRefreshLineFromTopToBottom()) {
-                tryToPerformRefresh();
-            }
-            // reach header height while auto refresh
-            if (performAutoRefreshButLater() && mPtrIndicator.hasJustReachedHeaderHeightFromTopToBottom()) {
-                tryToPerformRefresh();
-            }
-        }
-
-        if (DEBUG) {
-            PtrCLog.v(LOG_TAG, "updatePos: change: %s, current: %s last: %s, top: %s, headerHeight: %s",
-                    change, mPtrIndicator.getCurrentPosY(), mPtrIndicator.getLastPosY(), mContent.getTop(), mHeaderHeight);
-        }
+        DLog.v(LOG_TAG, "updatePos: change: %s, current: %s last: %s, top: %s, headerHeight: %s",
+                change, mIndicator.getCurrentPosY(), mIndicator.getLastPosY(), mContent.getTop(), mHeaderHeight);
 
         mHeaderView.offsetTopAndBottom(change);
-        if (!isPinContent()) {
-            mContent.offsetTopAndBottom(change);
-        }
+        mContent.offsetTopAndBottom(change);
         invalidate();
 
-        if (mPtrUIHandlerHolder.hasHandler()) {
-            mPtrUIHandlerHolder.onUIPositionChange(this, isUnderTouch, mStatus, mPtrIndicator);
-        }
-        onPositionChange(isUnderTouch, mStatus, mPtrIndicator);
+//        if (mPtrUIHandlerHolder.hasHandler()) {
+//            mPtrUIHandlerHolder.onUIPositionChange(this, isUnderTouch, mStatus, mPtrIndicator);
+//        }
+//        onPositionChange(isUnderTouch, mStatus, mPtrIndicator);
     }
 
     @Override
@@ -481,6 +486,60 @@ public class XRefreshLayout extends ViewGroup {
         addView(footer);
     }
 
+    private void onRelease(boolean stayForLoading) {
+
+        tryToPerformRefresh();
+
+        if (mStatus == PTR_STATUS_LOADING) {
+            // keep header for fresh
+            if (mKeepHeaderWhenRefresh) {
+                // scroll header back
+                if (mIndicator.isOverOffsetToKeepHeaderWhileLoading() && !stayForLoading) {
+                    mScrollChecker.tryToScrollTo(mIndicator.getOffsetToKeepHeaderWhileLoading(), mDurationToClose);
+                } else {
+                    // do nothing
+                }
+            } else {
+                tryScrollBackToTopWhileLoading();
+            }
+        } else {
+            if (mStatus == PTR_STATUS_COMPLETE) {
+//                notifyUIRefreshComplete(false);
+            } else {
+//                tryScrollBackToTopAbortRefresh();
+            }
+        }
+    }
+
+    private boolean tryToPerformRefresh() {
+        if (mStatus != PTR_STATUS_PREPARE) {
+            return false;
+        }
+
+        //
+        if ((mIndicator.isOverOffsetToKeepHeaderWhileLoading()) || mIndicator.isOverOffsetToRefresh()) {
+            mStatus = PTR_STATUS_LOADING;
+//            performRefresh();
+        }
+        return false;
+    }
+
+    /**
+     * Scroll back to to if is not under touch
+     */
+    private void tryScrollBackToTop() {
+        if (!mIndicator.isUnderTouch()) {
+            mScrollChecker.tryToScrollTo(mIndicator.POS_START, mDurationToCloseHeader);
+        }
+    }
+
+    /**
+     * just make easier to understand
+     */
+    private void tryScrollBackToTopWhileLoading() {
+        tryScrollBackToTop();
+    }
+
     class ScrollChecker implements Runnable {
 
         private int mLastFlingY;
@@ -498,7 +557,7 @@ public class XRefreshLayout extends ViewGroup {
             int curY = mScroller.getCurrY();
             int deltaY = curY - mLastFlingY;
             if (deltaY != 0) {
-                DLog.v(LOG_TAG,
+                DLog.v("MoveMoment",
                         "scroll: %s, start: %s, to: %s, currentPos: %s, current :%s, last: %s, delta: %s",
                         finish, mStart, mTo, mIndicator.getCurrentPosY(), curY, mLastFlingY, deltaY);
             }
@@ -514,7 +573,7 @@ public class XRefreshLayout extends ViewGroup {
         private void finish() {
             DLog.v(LOG_TAG, "finish, currentPos:%s", mIndicator.getCurrentPosY());
             reset();
-            onPtrScrollFinish();
+//            onPtrScrollFinish();
         }
 
         private void reset() {
@@ -535,7 +594,7 @@ public class XRefreshLayout extends ViewGroup {
                 if (!mScroller.isFinished()) {
                     mScroller.forceFinished(true);
                 }
-                onPtrScrollAbort();
+//                onPtrScrollAbort();
                 reset();
             }
         }
