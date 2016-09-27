@@ -7,7 +7,8 @@
     tools:context="com.auxvn.xrefreshlayout.MainActivity"
     android:background="#ffffff">
 
-    <com.auxvn.xrefreshlib.XRefreshDefautLayout
+    <in.srain.cube.views.ptr.PtrClassicFrameLayout
+        android:id="@+id/ptrlayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -17,5 +18,5 @@
             android:text="Hello Refresh"
             android:background="#388E3C"/>
 
-    </com.auxvn.xrefreshlib.XRefreshDefautLayout>
+    </in.srain.cube.views.ptr.PtrClassicFrameLayout>
 </RelativeLayout>

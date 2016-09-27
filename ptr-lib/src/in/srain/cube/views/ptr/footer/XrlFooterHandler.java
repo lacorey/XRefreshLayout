@@ -1,7 +1,7 @@
-package com.auxvn.xrefreshlib;
+package in.srain.cube.views.ptr.footer;
 
 /**
- * Created by zhaoxin on 16/9/24.
+ * Created by sinye on 16/9/24.
  */
 
 public interface XrlFooterHandler {

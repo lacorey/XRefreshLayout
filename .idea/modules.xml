@@ -3,8 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/XRefreshLayout.iml" filepath="$PROJECT_DIR$/XRefreshLayout.iml" />
-      <module fileurl="file://$PROJECT_DIR$/XRefreshLayoutLib/XRefreshLayoutLib.iml" filepath="$PROJECT_DIR$/XRefreshLayoutLib/XRefreshLayoutLib.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ptr-lib/ptr-lib.iml" filepath="$PROJECT_DIR$/ptr-lib/ptr-lib.iml" />
     </modules>
   </component>
 </project>

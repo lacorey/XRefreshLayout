@@ -1,4 +1,4 @@
-package com.auxvn.xrefreshlib.footer;
+package in.srain.cube.views.ptr.footer;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -6,11 +6,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.FrameLayout;
 
-import com.auxvn.xrefreshlib.R;
-import com.auxvn.xrefreshlib.XrlFooterHandler;
+import in.srain.cube.views.ptr.R;
+
 
 /**
- * Created by zhaoxin on 16/9/24.
+ * Created by sinye on 16/9/24.
  */
 
 public class XrlDefaultFooter extends FrameLayout implements XrlFooterHandler{
